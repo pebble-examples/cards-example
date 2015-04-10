@@ -1,0 +1,55 @@
+{
+  "uuid": "ae8b2bc4-7f29-41c4-b8e5-d0b3d7a999ad",
+  "shortName": "Cards Example",
+  "longName": "Cards Example",
+  "companyName": "Pebble Technology",
+  "versionCode": 1,
+  "versionLabel": "1.0",
+  "sdkVersion": "3",
+  "targetPlatforms": ["basalt"],
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": [
+      {
+        "type": "raw",
+        "name": "ICON_GENERIC_WEATHER",
+        "file": "Pebble_50x50_Generic_weather.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_HEAVY_RAIN",
+        "file": "Pebble_50x50_Heavy_rain.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_HEAVY_SNOW",
+        "file": "Pebble_50x50_Heavy_snow.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_LIGHT_RAIN",
+        "file": "Pebble_50x50_Light_rain.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_LIGHT_SNOW",
+        "file": "Pebble_50x50_Light_snow.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_PARTLY_CLOUDY",
+        "file": "Pebble_50x50_Partly_cloudy.pdc"
+      },
+      {
+        "type": "raw",
+        "name": "ICON_SUNNY_DAY",
+        "file": "Pebble_50x50_Sunny_day.pdc"
+      }
+    ]
+  }
+}
