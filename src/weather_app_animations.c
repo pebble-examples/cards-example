@@ -81,7 +81,7 @@ static void update_bg_color_normalized(Animation *animation, const uint32_t dist
 
 static const PropertyAnimationImplementation s_bg_color_normalized_implementation = {
   .base = {
-    .update = update_bg_color_normalized,
+    .update = (AnimationUpdateImplementation) update_bg_color_normalized,
   },
 };
 
@@ -130,7 +130,7 @@ static void update_icon_square_normalized(Animation *animation, const uint32_t d
 
 static const PropertyAnimationImplementation s_icon_scquare_normalized_implementation = {
   .base = {
-    .update = update_icon_square_normalized,
+    .update = (AnimationUpdateImplementation) update_icon_square_normalized,
   },
 };
 

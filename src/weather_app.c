@@ -288,7 +288,6 @@ static void init() {
 
   s_main_window = window_create();
   window_set_click_config_provider_with_context(s_main_window, click_config_provider, data);
-  window_set_fullscreen(s_main_window, true);
   window_set_user_data(s_main_window, data);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
