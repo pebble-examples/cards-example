@@ -354,28 +354,44 @@ svg_element_parser = {'path': parse_path,
                       'line': parse_line,
                       'rect': parse_rect}
 
+# assume only depth 1 for groups for the moment, collapse groups on inkscape
+group_opacity = None
+group_fill = None
+group_fill_opacity = None
+group_stroke = None
+group_stroke_opacity = None
+group_stroke_width = None
 
 def create_command(translate, element, precise=False, raise_error=False, truncate_color=True):
-    try:
-        stroke_width = int(element.get('stroke-width'))
-    except TypeError:
-        stroke_width = 1
-    except ValueError:
-        stroke_width = 0
-
     style = element.get('style')
+    attributes = element
     if style:
       attributes = dict(item.split(":") for item in style.split(";") if item)
-      stroke_color = parse_color(attributes.get('stroke'), calc_opacity(attributes.get('stroke-opacity'),
-                                 attributes.get('opacity')), truncate_color)
-      fill_color = parse_color(attributes.get('fill'), calc_opacity(attributes.get('fill-opacity'), 
-                               attributes.get('opacity')), truncate_color)
 
-    else:
-      stroke_color = parse_color(element.get('stroke'), calc_opacity(element.get('stroke-opacity'),
-                                 element.get('opacity')), truncate_color)
-      fill_color = parse_color(element.get('fill'), calc_opacity(element.get('fill-opacity'),
-                               element.get('opacity')), truncate_color)
+    opacity = attributes.get('opacity')
+    stroke = attributes.get('stroke')
+    stroke_opacity = attributes.get('stroke-opacity')
+    fill = attributes.get('fill')
+    fill_opacity = attributes.get('fill-opacity')
+
+    # if attribute wasn't set, use group attribute
+    opacity = opacity if opacity else group_opacity
+    stroke = stroke if stroke else group_stroke
+    stroke_opacity = stroke_opacity if stroke_opacity else group_stroke_opacity
+    fill = fill if fill else group_fill
+    fill_opacity = fill_opacity if fill_opacity else group_fill_opacity
+
+    stroke_color = parse_color(stroke, calc_opacity(stroke_opacity, opacity), truncate_color)
+    fill_color = parse_color(fill, calc_opacity(fill_opacity, opacity), truncate_color)
+
+    try:
+        stroke_width = int(attributes.get('stroke-width'))
+    except TypeError:
+        #if value not set use global value or default to 1
+        stroke_width = group_stroke_width if group_stroke_width else 1
+    except ValueError:
+        #wrong format
+        stroke_width = 0
 
     if stroke_color == 0 and fill_color == 0:
         return None
@@ -400,8 +416,15 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
 
 
 def get_commands(translate, group, precise=False, raise_error=False, truncate_color=True):
+    global group_opacity
+    global group_fill
+    global group_fill_opacity
+    global group_stroke
+    global group_stroke_opacity
+    global group_stroke_width
     commands = []
     error = False
+
     for child in group.getchildren():
         # ignore elements that are marked display="none"
         display = child.get('display')
@@ -414,7 +437,25 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
 
         # traverse tree of nested layers or groups
         if tag == 'layer' or tag == 'g':
-            translate += get_translate(child)
+            #get and set (or clear) group attributes
+            if tag == 'g':
+              group_opacity = child.get('opacity') if child.get('opacity') else None
+              group_fill = child.get('fill') if child.get('fill') else None
+              group_fill_opacity = child.get('fill-opacity') if child.get('fill-opacity') else None
+              group_stroke = child.get('stroke') if child.get('stroke') else None
+              group_stroke_opacity = child.get('stroke-opacity') if child.get('stroke-opacity') else None
+              group_stroke_width = child.get('stroke-width') if child.get('stroke-width') else None
+              #fix stroke-width for '1px' to be int 1
+              if group_stroke_width:
+                group_stroke_width = int(filter( lambda x: x in '0123456789.', group_stroke_width))
+                group_stroke_width = group_stroke_width if group_stroke_width >= 1 else 1
+              #handle the transform in the layer group
+              transform = child.get('transform')
+              if 'translate' in transform:
+                translate_strs = re.search(r'(?:translate\()(.*)\s(.*)\)',transform).group(1,2)
+                translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
+            child_translate = get_translate(child)
+            translate = (translate[0] + child_translate[0], translate[1] + child_translate[1])
             cmd_list, err = get_commands(translate, child, precise, raise_error, truncate_color)
             commands += cmd_list
             if err:
