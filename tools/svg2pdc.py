@@ -20,6 +20,7 @@ from struct import pack
 import os
 import glob
 import sys
+import re
 
 epsilon = sys.float_info.epsilon
 
@@ -362,10 +363,19 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
     except ValueError:
         stroke_width = 0
 
-    stroke_color = parse_color(element.get('stroke'), calc_opacity(element.get('stroke-opacity'),
+    style = element.get('style')
+    if style:
+      attributes = dict(item.split(":") for item in style.split(";") if item)
+      stroke_color = parse_color(attributes.get('stroke'), calc_opacity(attributes.get('stroke-opacity'),
+                                 attributes.get('opacity')), truncate_color)
+      fill_color = parse_color(attributes.get('fill'), calc_opacity(attributes.get('fill-opacity'), 
+                               attributes.get('opacity')), truncate_color)
+
+    else:
+      stroke_color = parse_color(element.get('stroke'), calc_opacity(element.get('stroke-opacity'),
+                                 element.get('opacity')), truncate_color)
+      fill_color = parse_color(element.get('fill'), calc_opacity(element.get('fill-opacity'),
                                element.get('opacity')), truncate_color)
-    fill_color = parse_color(element.get('fill'), calc_opacity(element.get('fill-opacity'), element.get('opacity')),
-                             truncate_color)
 
     if stroke_color == 0 and fill_color == 0:
         return None
