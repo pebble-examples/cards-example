@@ -450,7 +450,7 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
                 group_stroke_width = int(filter( lambda x: x in '0123456789.', group_stroke_width))
                 group_stroke_width = group_stroke_width if group_stroke_width >= 1 else 1
               #handle the transform in the layer group
-              transform = child.get('transform')
+              transform = child.get('transform', dict())
               if 'translate' in transform:
                 translate_strs = re.search(r'(?:translate\()(.*)\s(.*)\)',transform).group(1,2)
                 translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
