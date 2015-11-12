@@ -198,7 +198,11 @@ class CircleCommand(Command):
 
 def get_viewbox(root):
     try:
-        coords = root.get('viewBox').split()
+        viewBox = root.get('viewBox')
+        if viewBox is not None :
+            coords = root.get('viewBox').split()
+        else :
+            coords = (0, 0, root.get('width'), root.get('height'))
         return (float(coords[0]), float(coords[1])), (float(coords[2]), float(coords[3]))
     except (ValueError, TypeError):
         return (0, 0), (0, 0)
