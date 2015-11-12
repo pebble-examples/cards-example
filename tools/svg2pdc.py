@@ -389,7 +389,7 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
     fill_color = parse_color(fill, calc_opacity(fill_opacity, opacity), truncate_color)
 
     try:
-        stroke_width = int(attributes.get('stroke-width'))
+        stroke_width = int(float(attributes.get('stroke-width')))
     except TypeError:
         #if value not set use global value or default to 1
         stroke_width = group_stroke_width if group_stroke_width else 1
@@ -451,7 +451,7 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
               group_stroke_width = child.get('stroke-width') if child.get('stroke-width') else None
               #fix stroke-width for '1px' to be int 1
               if group_stroke_width:
-                group_stroke_width = int(filter( lambda x: x in '0123456789.', group_stroke_width))
+                group_stroke_width = int(float(filter( lambda x: x in '0123456789.', group_stroke_width)))
                 group_stroke_width = group_stroke_width if group_stroke_width >= 1 else 1
               #handle the transform in the layer group
               transform = child.get('transform')
