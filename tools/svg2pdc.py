@@ -456,7 +456,7 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
               #handle the transform in the layer group
               transform = child.get('transform')
               if 'translate' in transform:
-                translate_strs = re.search(r'(?:translate\()(.*)\s(.*)\)',transform).group(1,2)
+                translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
                 translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
             child_translate = get_translate(child)
             translate = (translate[0] + child_translate[0], translate[1] + child_translate[1])
