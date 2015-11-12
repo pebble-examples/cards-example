@@ -466,7 +466,13 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
                 error = True
         else:
             try:
-                c = create_command(translate, child, precise, raise_error, truncate_color)
+                #handle the transform in the element
+                child_translate = translate
+                transform = child.get('transform')
+                if transform is not None and 'translate' in transform:
+                    translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
+                    child_translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
+                c = create_command(child_translate, child, precise, raise_error, truncate_color)
                 if c is not None:
                     commands.append(c)
             except InvalidPointException:
