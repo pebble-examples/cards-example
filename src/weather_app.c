@@ -26,12 +26,12 @@ static void bg_update_proc(Layer *layer, GContext *ctx) {
 
   int16_t y = (model->bg_color.to_bottom_normalized * bounds.size.h) / ANIMATION_NORMALIZED_MAX;
 
-  graphics_context_set_fill_color(ctx, model->bg_color.bottom);
+  graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(model->bg_color.bottom, GColorWhite));
   GRect rect_top = bounds;
   rect_top.size.h = y;
   graphics_fill_rect(ctx, rect_top, 0, GCornerNone);
 
-  graphics_context_set_fill_color(ctx, model->bg_color.top);
+  graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(model->bg_color.top, GColorWhite));
   GRect rect_bottom = bounds;
   rect_bottom.origin.y += y;
   graphics_fill_rect(ctx, rect_bottom, 0, GCornerNone);
@@ -42,7 +42,7 @@ static void horizontal_ruler_update_proc(Layer *layer, GContext *ctx) {
   // y relative to layer's bounds to support clipping after some vertical scrolling
   const int16_t yy = 11;
 
-  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, PBL_IF_COLOR_ELSE(GColorWhite, GColorBlack));
   graphics_draw_line(ctx, GPoint(0, yy), GPoint(bounds.size.w, yy));
 }
 
@@ -73,7 +73,7 @@ static GRect init_text_layer(Layer *parent_layer, TextLayer **text_layer, int16_
 
   *text_layer = text_layer_create(frame);
   text_layer_set_background_color(*text_layer, GColorClear);
-  text_layer_set_text_color(*text_layer, GColorWhite);
+  text_layer_set_text_color(*text_layer, PBL_IF_COLOR_ELSE(GColorWhite, GColorBlack));
   text_layer_set_font(*text_layer, fonts_get_system_font(font_key));
   layer_add_child(parent_layer, text_layer_get_layer(*text_layer));
   return frame;
@@ -185,8 +185,8 @@ static Animation *create_anim_scroll_in(Layer *layer, uint32_t duration, int16_t
   return result;
 }
 
-static const uint32_t BACKGROUND_SCROLL_DURATION = 120 * 10;
-static const uint32_t SCROLL_DURATION = 150 * 10;
+static const uint32_t BACKGROUND_SCROLL_DURATION = 100 * 2;
+static const uint32_t SCROLL_DURATION = 130 * 2;
 static const int16_t SCROLL_DIST_OUT = 20;
 static const int16_t SCROLL_DIST_IN = 8;
 
