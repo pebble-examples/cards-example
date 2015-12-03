@@ -198,7 +198,11 @@ class CircleCommand(Command):
 
 def get_viewbox(root):
     try:
-        coords = root.get('viewBox').split()
+        viewBox = root.get('viewBox')
+        if viewBox is not None :
+            coords = root.get('viewBox').split()
+        else :
+            coords = (0, 0, root.get('width'), root.get('height'))
         return (float(coords[0]), float(coords[1])), (float(coords[2]), float(coords[3]))
     except (ValueError, TypeError):
         return (0, 0), (0, 0)
@@ -385,7 +389,7 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
     fill_color = parse_color(fill, calc_opacity(fill_opacity, opacity), truncate_color)
 
     try:
-        stroke_width = int(attributes.get('stroke-width'))
+        stroke_width = int(float(attributes.get('stroke-width')))
     except TypeError:
         #if value not set use global value or default to 1
         stroke_width = group_stroke_width if group_stroke_width else 1
@@ -447,12 +451,12 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
               group_stroke_width = child.get('stroke-width') if child.get('stroke-width') else None
               #fix stroke-width for '1px' to be int 1
               if group_stroke_width:
-                group_stroke_width = int(filter( lambda x: x in '0123456789.', group_stroke_width))
+                group_stroke_width = int(float(filter( lambda x: x in '0123456789.', group_stroke_width)))
                 group_stroke_width = group_stroke_width if group_stroke_width >= 1 else 1
               #handle the transform in the layer group
               transform = child.get('transform', dict())
               if 'translate' in transform:
-                translate_strs = re.search(r'(?:translate\()(.*)\s(.*)\)',transform).group(1,2)
+                translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
                 translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
             child_translate = get_translate(child)
             translate = (translate[0] + child_translate[0], translate[1] + child_translate[1])
@@ -462,7 +466,13 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
                 error = True
         else:
             try:
-                c = create_command(translate, child, precise, raise_error, truncate_color)
+                #handle the transform in the element
+                child_translate = translate
+                transform = child.get('transform')
+                if transform is not None and 'translate' in transform:
+                    translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
+                    child_translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
+                c = create_command(child_translate, child, precise, raise_error, truncate_color)
                 if c is not None:
                     commands.append(c)
             except InvalidPointException:
