@@ -559,7 +559,7 @@ def parse_svg_sequence(dir_name, precise=False, raise_error=False):
     translate, size = get_info(get_xml(file_list[0]))  # get the viewbox from the first file
     for filename in file_list:
         cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
-        if cmd_list is not None:
+        if cmd_list:
             frames.append(cmd_list)
         if error:
             error_files.append(filename)
