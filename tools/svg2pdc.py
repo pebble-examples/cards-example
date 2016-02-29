@@ -505,22 +505,22 @@ def print_commands(commands):
 
 def print_frames(frames):
     for i in range(len(frames)):
-        print 'Frame {}:'.format(i + 1)
-        print_commands(frames[i])
+        print 'Frame {}, duration {} ms:'.format(i + 1, frames[i]['duration'])
+        print_commands(frames[i]['command_list'])
 
 
-def serialize_frame(frame, duration):
-    return pack('H', duration) + serialize(frame)   # Frame duration
+def serialize_frame(frame):
+    return pack('H', frame['duration']) + serialize(frame['command_list'])
 
 
 def pack_header(size):
     return pack('<BBhh', DRAW_COMMAND_VERSION, 0, int(round(size[0])), int(round(size[1])))
 
 
-def serialize_sequence(frames, size, duration, play_count):
+def serialize_sequence(frames, size, play_count):
     s = pack_header(size) + pack('H', play_count) + pack('H', len(frames))
     for f in frames:
-        s += serialize_frame(f, duration)
+        s += serialize_frame(f)
 
     output = "PDCS"
     output += pack('I', len(s))
@@ -551,7 +551,7 @@ def parse_svg_image(filename, precise=False, raise_error=False):
     return size, cmd_list, error
 
 
-def parse_svg_sequence(dir_name, precise=False, raise_error=False):
+def parse_svg_sequence(dir_name, duration, precise=False, raise_error=False):
     frames = []
     error_files = []
     file_list = sorted(glob.glob(dir_name + "/*.svg"))
@@ -561,7 +561,7 @@ def parse_svg_sequence(dir_name, precise=False, raise_error=False):
     for filename in file_list:
         cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
         if cmd_list:
-            frames.append(cmd_list)
+            frames.append({'command_list': cmd_list, 'duration': duration})
         if error:
             error_files.append(filename)
     return size, frames, error_files
@@ -580,12 +580,12 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
         commands = []
         if sequence:
             # get all .svg files in directory
-            result = parse_svg_sequence(dir_name, precise, raise_error)
+            result = parse_svg_sequence(dir_name, duration, precise, raise_error)
             if result:
                 frames = result[1]
                 size = result[0]
                 error_files += result[2]
-                output = serialize_sequence(frames, size, duration, play_count)
+                output = serialize_sequence(frames, size, play_count)
         elif os.path.isfile(path):
             size, commands, error = parse_svg_image(path, precise, raise_error)
             if commands:
