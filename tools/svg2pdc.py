@@ -551,7 +551,27 @@ def parse_svg_image(filename, precise=False, raise_error=False):
     return size, cmd_list, error
 
 
-def parse_svg_sequence(dir_name, duration, precise=False, raise_error=False):
+def parse_sequence_file(filename):
+    '''
+    <?xml version="1.0" encoding="UTF-8"?>
+    <sequence>
+      <frame src="frames/01.svg" duration="33" />
+      <frame src="frames/02.svg" duration="33" />
+      <frame src="frames/03.svg" duration="99" />
+      <frame src="frames/02.svg" duration="33" />
+      <frame src="frames/01.svg" duration="33" />
+    </sequence>
+    '''
+    sequence_root = get_xml(filename)
+    frames_desc = []
+    for frame_desc in sequence_root:
+        src = os.path.dirname(filename) + '/' + frame_desc.get('src')
+        duration = int(frame_desc.get('duration'))
+        frames_desc.append({'src': src, 'duration': duration})
+    return frames_desc
+
+
+def parse_svg_sequence_dir(dir_name, duration, precise=False, raise_error=False):
     frames = []
     error_files = []
     file_list = sorted(glob.glob(dir_name + "/*.svg"))
@@ -562,6 +582,19 @@ def parse_svg_sequence(dir_name, duration, precise=False, raise_error=False):
         cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
         if cmd_list:
             frames.append({'command_list': cmd_list, 'duration': duration})
+        if error:
+            error_files.append(filename)
+    return size, frames, error_files
+
+
+def parse_svg_sequence_file(filename, precise=False, raise_error=False):
+    frames = []
+    error_files = []
+    frames_desc = parse_sequence_file(filename)
+    for frame_desc in frames_desc:
+        size, cmd_list, error = parse_svg_image(frame_desc['src'], precise, raise_error)
+        if cmd_list:
+            frames.append({'command_list': cmd_list, 'duration': frame_desc['duration']})
         if error:
             error_files.append(filename)
     return size, frames, error_files
@@ -579,8 +612,10 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
         frames = []
         commands = []
         if sequence:
-            # get all .svg files in directory
-            result = parse_svg_sequence(dir_name, duration, precise, raise_error)
+            if os.path.isfile(path):
+                result = parse_svg_sequence_file(path, precise, raise_error)
+            else:
+                result = parse_svg_sequence_dir(dir_name, duration, precise, raise_error)
             if result:
                 frames = result[1]
                 size = result[0]
@@ -629,7 +664,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str,
-                        help="Path to svg file or directory (with multiple svg files)")
+                        help="Path to svg file, or sequence file, or directory (with multiple svg files)")
     parser.add_argument('-s', '--sequence', action='store_true',
                         help="Path is a directory and a sequence will be produced as output")
     parser.add_argument('-o', '--output', type=str,
