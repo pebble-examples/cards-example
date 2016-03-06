@@ -551,7 +551,7 @@ def parse_svg_image(filename, precise=False, raise_error=False):
     return size, cmd_list, error
 
 
-def parse_sequence_file(filename):
+def parse_sequence_file(filename, duration_fallback=False):
     '''
     <?xml version="1.0" encoding="UTF-8"?>
     <sequence default_duration="33" >
@@ -569,7 +569,12 @@ def parse_sequence_file(filename):
         for frame_desc in sequence_root:
             try:
                 src = os.path.dirname(filename) + '/' + str(frame_desc.get('src'))
-                duration = int(frame_desc.get('duration')) if frame_desc.get('duration') else int(default_duration)
+                if frame_desc.get('duration'):
+                    duration = int(frame_desc.get('duration'))
+                elif default_duration:
+                    duration = int(default_duration)
+                else:
+                    duration = int(duration_fallback)
                 if os.path.isfile(src):
                     frames_desc.append({'src': src, 'duration': duration})
                 else:
@@ -597,10 +602,10 @@ def parse_svg_sequence_dir(dir_name, duration, precise=False, raise_error=False)
     return size, frames, error_files
 
 
-def parse_svg_sequence_file(filename, precise=False, raise_error=False):
+def parse_svg_sequence_file(filename, duration_fallback=False, precise=False, raise_error=False):
     frames = []
     error_files = []
-    frames_desc = parse_sequence_file(filename)
+    frames_desc = parse_sequence_file(filename, duration_fallback)
     for frame_desc in frames_desc:
         size, cmd_list, error = parse_svg_image(frame_desc['src'], precise, raise_error)
         if cmd_list:
@@ -623,7 +628,7 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
         commands = []
         if sequence:
             if os.path.isfile(path):
-                result = parse_svg_sequence_file(path, precise, raise_error)
+                result = parse_svg_sequence_file(path, duration, precise, raise_error)
             else:
                 result = parse_svg_sequence_dir(dir_name, duration, precise, raise_error)
             if result:
