@@ -554,26 +554,30 @@ def parse_svg_image(filename, precise=False, raise_error=False):
 def parse_sequence_file(filename):
     '''
     <?xml version="1.0" encoding="UTF-8"?>
-    <sequence>
-      <frame src="frames/01.svg" duration="33" />
-      <frame src="frames/02.svg" duration="33" />
+    <sequence default_duration="33" >
+      <frame src="frames/01.svg" />
+      <frame src="frames/02.svg" />
       <frame src="frames/03.svg" duration="99" />
-      <frame src="frames/02.svg" duration="33" />
-      <frame src="frames/01.svg" duration="33" />
+      <frame src="frames/02.svg" />
+      <frame src="frames/01.svg" />
     </sequence>
     '''
     sequence_root = get_xml(filename)
     frames_desc = []
-    for frame_desc in sequence_root:
-        try:
-            src = os.path.dirname(filename) + '/' + str(frame_desc.get('src'))
-            duration = int(frame_desc.get('duration'))
-            if os.path.isfile(src):
-                frames_desc.append({'src': src, 'duration': duration})
-            else:
-	        raise ValueError
-        except (TypeError, ValueError):
-            print 'Invalid frame definition: ' + src
+    try:
+        default_duration = sequence_root.get('default_duration')
+        for frame_desc in sequence_root:
+            try:
+                src = os.path.dirname(filename) + '/' + str(frame_desc.get('src'))
+                duration = int(frame_desc.get('duration')) if frame_desc.get('duration') else int(default_duration)
+                if os.path.isfile(src):
+                    frames_desc.append({'src': src, 'duration': duration})
+                else:
+                    raise ValueError
+            except (TypeError, ValueError):
+                print 'Invalid frame definition: ' + src
+    except (TypeError, ValueError):
+        print 'Invalid sequence file'
     return frames_desc
 
 
