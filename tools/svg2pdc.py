@@ -591,7 +591,9 @@ def parse_svg_sequence(sequence_frames, precise=False, raise_error=False):
     frames = []
     error_files = []
     for sequence_frame in sequence_frames:
-        size, cmd_list, error = parse_svg_image(sequence_frame['src'], precise, raise_error)
+        image_size, cmd_list, error = parse_svg_image(sequence_frame['src'], precise, raise_error)
+        if size == (0, 0): # get the viewbox from the first frame
+	    size = image_size
         if cmd_list:
             frames.append({'command_list': cmd_list, 'duration': sequence_frame['duration']})
         if error:
