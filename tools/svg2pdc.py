@@ -565,9 +565,15 @@ def parse_sequence_file(filename):
     sequence_root = get_xml(filename)
     frames_desc = []
     for frame_desc in sequence_root:
-        src = os.path.dirname(filename) + '/' + frame_desc.get('src')
-        duration = int(frame_desc.get('duration'))
-        frames_desc.append({'src': src, 'duration': duration})
+        try:
+            src = os.path.dirname(filename) + '/' + str(frame_desc.get('src'))
+            duration = int(frame_desc.get('duration'))
+            if os.path.isfile(src):
+                frames_desc.append({'src': src, 'duration': duration})
+            else:
+	        raise ValueError
+        except (TypeError, ValueError):
+            print 'Invalid frame definition: ' + src
     return frames_desc
 
 
