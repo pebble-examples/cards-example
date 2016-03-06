@@ -586,33 +586,30 @@ def parse_sequence_file(filename, duration_fallback=False):
     return frames_desc
 
 
-def parse_svg_sequence_dir(dir_name, duration, precise=False, raise_error=False):
+def parse_svg_sequence(sequence_frames, precise=False, raise_error=False):
+    size = (0, 0)
     frames = []
     error_files = []
-    file_list = sorted(glob.glob(dir_name + "/*.svg"))
-    if not file_list:
-        return
-    translate, size = get_info(get_xml(file_list[0]))  # get the viewbox from the first file
-    for filename in file_list:
-        cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
+    for sequence_frame in sequence_frames:
+        size, cmd_list, error = parse_svg_image(sequence_frame['src'], precise, raise_error)
         if cmd_list:
-            frames.append({'command_list': cmd_list, 'duration': duration})
+            frames.append({'command_list': cmd_list, 'duration': sequence_frame['duration']})
         if error:
             error_files.append(filename)
     return size, frames, error_files
+
+
+def parse_svg_sequence_dir(dir_name, duration, precise=False, raise_error=False):
+    sequence_frames = []
+    file_list = sorted(glob.glob(dir_name + "/*.svg"))
+    for filename in file_list:
+        sequence_frames.append({'src': filename, 'duration': duration})
+    return parse_svg_sequence(sequence_frames, precise, raise_error)
 
 
 def parse_svg_sequence_file(filename, duration_fallback=False, precise=False, raise_error=False):
-    frames = []
-    error_files = []
-    frames_desc = parse_sequence_file(filename, duration_fallback)
-    for frame_desc in frames_desc:
-        size, cmd_list, error = parse_svg_image(frame_desc['src'], precise, raise_error)
-        if cmd_list:
-            frames.append({'command_list': cmd_list, 'duration': frame_desc['duration']})
-        if error:
-            error_files.append(filename)
-    return size, frames, error_files
+    sequence_frames = parse_sequence_file(filename, duration_fallback)
+    return parse_svg_sequence(sequence_frames, precise, raise_error)
 
 
 def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count, precise=False, raise_error=False):
