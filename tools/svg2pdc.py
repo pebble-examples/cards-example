@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # Copyright (c) 2015 Pebble Technology
 #
@@ -504,22 +505,22 @@ def print_commands(commands):
 
 def print_frames(frames):
     for i in range(len(frames)):
-        print 'Frame {}:'.format(i + 1)
-        print_commands(frames[i])
+        print 'Frame {}, duration {} ms:'.format(i + 1, frames[i]['duration'])
+        print_commands(frames[i]['command_list'])
 
 
-def serialize_frame(frame, duration):
-    return pack('H', duration) + serialize(frame)   # Frame duration
+def serialize_frame(frame):
+    return pack('H', frame['duration']) + serialize(frame['command_list'])
 
 
 def pack_header(size):
     return pack('<BBhh', DRAW_COMMAND_VERSION, 0, int(round(size[0])), int(round(size[1])))
 
 
-def serialize_sequence(frames, size, duration, play_count):
+def serialize_sequence(frames, size, play_count):
     s = pack_header(size) + pack('H', play_count) + pack('H', len(frames))
     for f in frames:
-        s += serialize_frame(f, duration)
+        s += serialize_frame(f)
 
     output = "PDCS"
     output += pack('I', len(s))
@@ -550,20 +551,67 @@ def parse_svg_image(filename, precise=False, raise_error=False):
     return size, cmd_list, error
 
 
-def parse_svg_sequence(dir_name, precise=False, raise_error=False):
+def parse_sequence_file(filename, duration_fallback=False):
+    '''
+    <?xml version="1.0" encoding="UTF-8"?>
+    <sequence default_duration="33" >
+      <frame src="frames/01.svg" />
+      <frame src="frames/02.svg" />
+      <frame src="frames/03.svg" duration="99" />
+      <frame src="frames/02.svg" />
+      <frame src="frames/01.svg" />
+    </sequence>
+    '''
+    sequence_root = get_xml(filename)
+    frames_desc = []
+    try:
+        default_duration = sequence_root.get('default_duration')
+        for frame_desc in sequence_root:
+            try:
+                src = os.path.dirname(filename) + '/' + str(frame_desc.get('src'))
+                if frame_desc.get('duration'):
+                    duration = int(frame_desc.get('duration'))
+                elif default_duration:
+                    duration = int(default_duration)
+                else:
+                    duration = int(duration_fallback)
+                if os.path.isfile(src):
+                    frames_desc.append({'src': src, 'duration': duration})
+                else:
+                    raise ValueError
+            except (TypeError, ValueError):
+                print 'Invalid frame definition: ' + src
+    except (TypeError, ValueError):
+        print 'Invalid sequence file'
+    return frames_desc
+
+
+def parse_svg_sequence(sequence_frames, precise=False, raise_error=False):
+    size = (0, 0)
     frames = []
     error_files = []
-    file_list = sorted(glob.glob(dir_name + "/*.svg"))
-    if not file_list:
-        return
-    translate, size = get_info(get_xml(file_list[0]))  # get the viewbox from the first file
-    for filename in file_list:
-        cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
-        if cmd_list is not None:
-            frames.append(cmd_list)
+    for sequence_frame in sequence_frames:
+        image_size, cmd_list, error = parse_svg_image(sequence_frame['src'], precise, raise_error)
+        if size == (0, 0): # get the viewbox from the first frame
+	    size = image_size
+        if cmd_list:
+            frames.append({'command_list': cmd_list, 'duration': sequence_frame['duration']})
         if error:
             error_files.append(filename)
     return size, frames, error_files
+
+
+def parse_svg_sequence_dir(dir_name, duration, precise=False, raise_error=False):
+    sequence_frames = []
+    file_list = sorted(glob.glob(dir_name + "/*.svg"))
+    for filename in file_list:
+        sequence_frames.append({'src': filename, 'duration': duration})
+    return parse_svg_sequence(sequence_frames, precise, raise_error)
+
+
+def parse_svg_sequence_file(filename, duration_fallback=False, precise=False, raise_error=False):
+    sequence_frames = parse_sequence_file(filename, duration_fallback)
+    return parse_svg_sequence(sequence_frames, precise, raise_error)
 
 
 def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count, precise=False, raise_error=False):
@@ -578,13 +626,15 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
         frames = []
         commands = []
         if sequence:
-            # get all .svg files in directory
-            result = parse_svg_sequence(dir_name, precise, raise_error)
+            if os.path.isfile(path):
+                result = parse_svg_sequence_file(path, duration, precise, raise_error)
+            else:
+                result = parse_svg_sequence_dir(dir_name, duration, precise, raise_error)
             if result:
                 frames = result[1]
                 size = result[0]
                 error_files += result[2]
-                output = serialize_sequence(frames, size, duration, play_count)
+                output = serialize_sequence(frames, size, play_count)
         elif os.path.isfile(path):
             size, commands, error = parse_svg_image(path, precise, raise_error)
             if commands:
@@ -628,7 +678,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str,
-                        help="Path to svg file or directory (with multiple svg files)")
+                        help="Path to svg file, or sequence file, or directory (with multiple svg files)")
     parser.add_argument('-s', '--sequence', action='store_true',
                         help="Path is a directory and a sequence will be produced as output")
     parser.add_argument('-o', '--output', type=str,
