@@ -262,9 +262,9 @@ def calc_opacity(a1, a2):
 
 
 def get_points_from_str(point_str):
+    point_list = point_str.replace(',', ' ').split()
     points = []
-    for p in point_str.split():
-        pair = p.split(',')
+    for pair in zip(*[iter(point_list)]*2):
         try:
             points.append((float(pair[0]), float(pair[1])))
         except (ValueError, TypeError):
