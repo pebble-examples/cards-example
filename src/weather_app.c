@@ -160,6 +160,8 @@ static void main_window_unload(Window *window) {
   layer_destroy(data->icon_layer);
   text_layer_destroy(data->fake_statusbar);
   text_layer_destroy(data->pagination_layer);
+  
+  free(data);
 }
 
 static void after_scroll_swap_text(Animation *animation, bool finished, void *context) {
