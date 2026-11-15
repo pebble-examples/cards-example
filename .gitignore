@@ -1,2 +1,4 @@
 build
 .lock-*
+/venv/
+__pycache__/

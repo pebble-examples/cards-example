@@ -13,7 +13,7 @@ g, layer, path, rect, polyline, polygon, line, circle,
 
 '''
 
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 import svg.path
 import argparse
 from struct import pack
@@ -70,8 +70,8 @@ def convert_to_pebble_coordinates(point, precise=False):
 
     valid = compare_points(point, nearest)
     if not valid:
-        print "Invalid point: ({}, {}). Closest supported coordinate: ({}, {})".format(point[0], point[1],
-                                                                                       nearest[0], nearest[1])
+        print("Invalid point: ({}, {}). Closest supported coordinate: ({}, {})".format(point[0], point[1],
+                                                                                       nearest[0], nearest[1]))
 
     translated = sum_points(point, (-0.5, -0.5))   # translate point by (-0.5, -0.5)
     if precise:
@@ -213,14 +213,14 @@ def get_translate(group):
     if trans is not None:
         pos = trans.find('translate')
         if pos < 0:
-            print "No translation in translate"
+            print("No translation in translate")
             return 0, 0
 
         import ast
         try:
             return ast.literal_eval(trans[pos + len('translate'):])
         except (ValueError, TypeError):
-            print "translate contains unsupported elements in addition to translation"
+            print("translate contains unsupported elements in addition to translation")
 
     return 0, 0
 
@@ -279,7 +279,7 @@ def parse_path(element, translate, stroke_width, stroke_color, fill_color, preci
         path = svg.path.parse_path(d)
         points = [(lambda l: (l.real, l.imag))(line.start) for line in path]
         if not points:
-            print "No points in parsed path"
+            print("No points in parsed path")
             return None
 
         path_open = path[-1].end != path[0].start
@@ -293,7 +293,7 @@ def parse_path(element, translate, stroke_width, stroke_color, fill_color, preci
 
         return PathCommand(points, path_open, translate, stroke_width, stroke_color, fill_color, precise, raise_error)
     else:
-        print "Path element does not have path attribute"
+        print("Path element does not have path attribute")
 
 
 def parse_circle(element, translate, stroke_width, stroke_color, fill_color, precise, raise_error):
@@ -308,9 +308,9 @@ def parse_circle(element, translate, stroke_width, stroke_color, fill_color, pre
             radius = float(radius)
             return CircleCommand(center, radius, translate, stroke_width, stroke_color, fill_color)
         except ValueError:
-            print "Unrecognized circle format"
+            print("Unrecognized circle format")
     else:
-        print "Unrecognized circle format"
+        print("Unrecognized circle format")
 
 
 def parse_polyline(element, translate, stroke_width, stroke_color, fill_color, precise, raise_error):
@@ -366,7 +366,7 @@ group_stroke = None
 group_stroke_opacity = None
 group_stroke_width = None
 
-def create_command(translate, element, precise=False, raise_error=False, truncate_color=True):
+def create_command(translate, element:ET.Element, precise=False, raise_error=False, truncate_color=True):
     style = element.get('style')
     attributes = element
     if style:
@@ -389,7 +389,11 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
     fill_color = parse_color(fill, calc_opacity(fill_opacity, opacity), truncate_color)
 
     try:
-        stroke_width = int(float(attributes.get('stroke-width')))
+        tmp_stroke_w = attributes.get('stroke-width')
+        if tmp_stroke_w:
+            stroke_width = int(float(tmp_stroke_w))
+        else:
+            stroke_width = group_stroke_width if group_stroke_width else 1
     except TypeError:
         #if value not set use global value or default to 1
         stroke_width = group_stroke_width if group_stroke_width else 1
@@ -414,12 +418,12 @@ def create_command(translate, element, precise=False, raise_error=False, truncat
         return svg_element_parser[tag](element, translate, stroke_width, stroke_color, fill_color, precise, raise_error)
     except KeyError:
         if tag != 'g' and tag != 'layer':
-            print "Unsupported element: " + tag
+            print("Unsupported element: " + tag)
 
     return None
 
 
-def get_commands(translate, group, precise=False, raise_error=False, truncate_color=True):
+def get_commands(translate, group:ET.Element, precise=False, raise_error=False, truncate_color=True)->tuple[list[dict],bool]:
     global group_opacity
     global group_fill
     global group_fill_opacity
@@ -429,7 +433,7 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
     commands = []
     error = False
 
-    for child in group.getchildren():
+    for child in group:
         # ignore elements that are marked display="none"
         display = child.get('display')
         if display is not None and display == 'none':
@@ -451,13 +455,18 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
               group_stroke_width = child.get('stroke-width') if child.get('stroke-width') else None
               #fix stroke-width for '1px' to be int 1
               if group_stroke_width:
-                group_stroke_width = int(float(filter( lambda x: x in '0123456789.', group_stroke_width)))
+                group_stroke_width = int(float(''.join(filter( lambda x: x in '0123456789.', group_stroke_width))))
                 group_stroke_width = group_stroke_width if group_stroke_width >= 1 else 1
               #handle the transform in the layer group
               transform = child.get('transform', dict())
               if 'translate' in transform:
-                translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
-                translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
+                if transform is str:
+                    translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform)
+                    if translate_strs:
+                        translate_strs.group(1,2)
+                    else: 
+                            raise ValueError("Parsing translate returned Null.")
+                    translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
             child_translate = get_translate(child)
             translate = (translate[0] + child_translate[0], translate[1] + child_translate[1])
             cmd_list, err = get_commands(translate, child, precise, raise_error, truncate_color)
@@ -470,7 +479,12 @@ def get_commands(translate, group, precise=False, raise_error=False, truncate_co
                 child_translate = translate
                 transform = child.get('transform')
                 if transform is not None and 'translate' in transform:
-                    translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform).group(1,2)
+                    translate_strs = re.search(r'(?:translate\()(.*),(.*)\)',transform)
+                    if translate_strs:
+                        translate_strs.group(1,2)
+                    else:
+                        raise ValueError("Parsing translate returned Null.")
+
                     child_translate = (translate[0] + float(translate_strs[0]), translate[1] + float(translate_strs[1]))
                 c = create_command(child_translate, child, precise, raise_error, truncate_color)
                 if c is not None:
@@ -499,12 +513,12 @@ def serialize(commands):
 
 def print_commands(commands):
     for c in commands:
-        print str(c)
+        print(str(c))
 
 
 def print_frames(frames):
     for i in range(len(frames)):
-        print 'Frame {}:'.format(i + 1)
+        print('Frame {}:'.format(i + 1))
         print_commands(frames[i])
 
 
@@ -521,7 +535,8 @@ def serialize_sequence(frames, size, duration, play_count):
     for f in frames:
         s += serialize_frame(f, duration)
 
-    output = "PDCS"
+    pdcs = b"PDCS"
+    output = pack(str(len(pdcs))+"s",pdcs)
     output += pack('I', len(s))
     output += s
     return output
@@ -531,7 +546,8 @@ def serialize_image(commands, size):
     s = pack_header(size)
     s += serialize(commands)
 
-    output = "PDCI"
+    pdci = b"PDCI"
+    output = pack(str(len(pdci))+"s",pdci)
     output += pack('I', len(s))
     output += s
     return output
@@ -546,8 +562,11 @@ def get_info(xml):
 def parse_svg_image(filename, precise=False, raise_error=False):
     root = get_xml(filename)
     translate, size = get_info(root)
-    cmd_list, error = get_commands(translate, root, precise, raise_error)
-    return size, cmd_list, error
+    if root is not None:
+        cmd_list, error = get_commands(translate, root, precise, raise_error)
+        return size, cmd_list, error
+    else:
+        raise TypeError("get_xml returned None.")
 
 
 def parse_svg_sequence(dir_name, precise=False, raise_error=False):
@@ -558,11 +577,13 @@ def parse_svg_sequence(dir_name, precise=False, raise_error=False):
         return
     translate, size = get_info(get_xml(file_list[0]))  # get the viewbox from the first file
     for filename in file_list:
-        cmd_list, error = get_commands(translate, get_xml(filename), precise, raise_error)
-        if cmd_list is not None:
-            frames.append(cmd_list)
-        if error:
-            error_files.append(filename)
+        xml = get_xml(filename)
+        if xml:
+            cmd_list, error = get_commands(translate, xml, precise, raise_error)
+            if cmd_list is not None:
+                frames.append(cmd_list)
+            if error:
+                error_files.append(filename)
     return size, frames, error_files
 
 
@@ -572,7 +593,7 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
     error_files = []
     if os.path.exists(path):
         if verbose:
-            print path + ":"
+            print(path + ":")
         if os.path.isfile(path):
             dir_name = os.path.dirname(path)
         frames = []
@@ -598,7 +619,7 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
             elif commands:
                 print_commands(commands)
     else:
-        print "Invalid path"
+        print("Invalid path")
 
     if output != '':
         if out_path is None:
@@ -608,7 +629,7 @@ def create_pdc_from_path(path, sequence, out_path, verbose, duration, play_count
                 base = os.path.basename(path)
                 f = '.'.join(base.split('.')[:-1]) + '.pdc'
             out_path = os.path.join(dir_name, f)
-        with open(out_path, 'w') as out_file:
+        with open(out_path, 'wb') as out_file:
             out_file.write(output)
             out_file.close()
 
@@ -620,9 +641,9 @@ def main(args):
     error_files = create_pdc_from_path(path, args.sequence, args.output, args.verbose, args.duration, args.play_count,
                                        args.precise)
     if error_files:
-        print "Errors in the following files:"
+        print("Errors in the following files:")
         for ef in error_files:
-            print "\t" + str(ef)
+            print("\t" + str(ef))
 
 
 if __name__ == '__main__':
