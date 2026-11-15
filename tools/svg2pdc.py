@@ -13,7 +13,7 @@ g, layer, path, rect, polyline, polygon, line, circle,
 
 '''
 
-import xml.etree.cElementTree as ET
+import xml.etree.ElementTree as ET
 import svg.path
 import argparse
 from struct import pack
