@@ -394,9 +394,6 @@ def create_command(translate, element:ET.Element, precise=False, raise_error=Fal
             stroke_width = int(float(tmp_stroke_w))
         else:
             stroke_width = group_stroke_width if group_stroke_width else 1
-    except TypeError:
-        #if value not set use global value or default to 1
-        stroke_width = group_stroke_width if group_stroke_width else 1
     except ValueError:
         #wrong format
         stroke_width = 0
@@ -423,7 +420,7 @@ def create_command(translate, element:ET.Element, precise=False, raise_error=Fal
     return None
 
 
-def get_commands(translate, group:ET.Element, precise=False, raise_error=False, truncate_color=True)->tuple[list[dict],bool]:
+def get_commands(translate, group:ET.Element, precise=False, raise_error=False, truncate_color=True):
     global group_opacity
     global group_fill
     global group_fill_opacity
