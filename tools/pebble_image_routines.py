@@ -11,7 +11,7 @@ import math
 # Create pebble 64 colors-table (r, g, b - 2 bits per channel)
 def pebble_get_64color_palette():
     pebble_palette = []
-    for i in xrange(0, 64):
+    for i in range(0, 64):
         pebble_palette.append((
             ((i >> 4) & 0x3) * 85,   # R
             ((i >> 2) & 0x3) * 85,   # G
@@ -54,7 +54,7 @@ def pebble_truncate_color_to_pebble_palette(r, g, b, a):
 
 # converts a 32-bit RGBA color by channel to an ARGB8 (1 byte containing all 4 channels)
 def rgba32_triplet_to_argb8(r, g, b, a):
-    a, r, g, b = (a >> 6, r >> 6, g >> 6, b >> 6)
+    a, r, g, b = (int(a) >> 6, int(r) >> 6, int(g) >> 6, int(b) >> 6)
     argb8 = (a << 6) | (r << 4) | (g << 2) | b
     return argb8
 
